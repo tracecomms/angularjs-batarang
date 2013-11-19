@@ -70,12 +70,16 @@ var inject = function () {
         var objects = [],   // Keep a reference to each unique object or array
             paths = [];     // Keep the path to each unique object or array
 
-        return (function derez(value, path) {
+        return (function derez(value, path, depth) {
+          depth = depth || 0;
           var i,          // The loop counter
               name,       // Property name
               nu;         // The new object or array
           switch (typeof value) {
           case 'object':
+            if (depth > 4) {
+                return null;
+            }
             if (value instanceof HTMLElement) {
               return value.innerHTML.toString().trim();
             }
@@ -89,17 +93,21 @@ var inject = function () {
             }
             objects.push(value);
             paths.push(path);
+            if (typeof value._backingStore === 'object') {
+              nu = derez(value._backingStore, path, depth);
+              return nu;
+            }
             if (value instanceof Array) {
               nu = [];
               for (i = 0; i < value.length; i += 1) {
-                nu[i] = derez(value[i], path + '[' + i + ']');
+                nu[i] = derez(value[i], path + '[' + i + ']', depth);
               }
             } else {
               nu = {};
               for (name in value) {
                 if (name[0] !== '$' && Object.prototype.hasOwnProperty.call(value, name)) {
                   nu[name] = derez(value[name],
-                    path + '[' + JSON.stringify(name) + ']');
+                    path + '[' + JSON.stringify(name) + ']', depth+1);
                 }
               }
             }
